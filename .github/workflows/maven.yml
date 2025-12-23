@@ -27,11 +27,6 @@ jobs:
         java-version: '8'
         distribution: 'temurin'
         cache: maven
-    - name: Build with Maven
-      run: |
-        echo "开始编译 Spring Boot 项目..."
-        mvn spring-boot:run
-        echo "编译完成！"
     - name: 打包项目
       run: |
         echo "打包 Spring Boot 应用..."
