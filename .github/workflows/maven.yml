@@ -1,45 +1,72 @@
-# This workflow will build a Java project with Maven, and cache/restore any dependencies to improve the workflow execution time
-# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-java-with-maven
-
-# This workflow uses actions that are not certified by GitHub.
-# They are provided by a third-party and are governed by
-# separate terms of service, privacy policy, and support
-# documentation.
-
-name: Java CI with Maven
+name: Manual Release
 
 on:
-  push:
-    branches: [ "master" ]
-  pull_request:
-    branches: [ "master" ]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: '1.0.0'
+        required: true
+      release_type:
+        description: 'Release'
+        required: true
+        default: 'stable'
+        type: choice
+        options:
+          - stable
+          - prerelease
+          - draft
+      changelog:
+        description: '测试如何进行发布'
+        required: false
+        default: ''
 
 jobs:
-  build:
-
+  release:
     runs-on: ubuntu-latest
-
+    permissions:
+      contents: write
+    
     steps:
-    - uses: actions/checkout@v4
-    - name: Set up JDK 8
+    - name: 检出代码
+      uses: actions/checkout@v4
+
+    - name: 设置 Java
       uses: actions/setup-java@v4
       with:
         java-version: '8'
-        distribution: 'temurin'
-        cache: maven
-    - name: 打包项目
-      run: |
-        echo "打包 Spring Boot 应用..."
-        mvn clean install
-        echo "打包完成！"
-        ls -la target/*.jar
 
-    - name: 运行应用（简单测试）
+    - name: 创建 Git 标签
       run: |
-        echo "启动 Spring Boot 应用..."
-        # 后台运行应用
-        java -jar target/helloworld-0.0.1-SNAPSHOT.jar
-        sleep 10
-        
-        echo "检查应用状态..."
-        curl -f http://localhost:8080 || echo "应用可能未启动或端口不同"
+        git config user.name "github-actions"
+        git config user.email "github-actions@github.com"
+        git tag -a v${{ github.event.inputs.version }} -m "Release v${{ github.event.inputs.version }}"
+        git push origin v${{ github.event.inputs.version }}
+
+    - name: 构建 JAR
+      run: |
+        mvn clean package -DskipTests
+        cp target/*.jar app-${{ github.event.inputs.version }}.jar
+
+    - name: 创建 Release
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: v${{ github.event.inputs.version }}
+        name: Release v${{ github.event.inputs.version }}
+        body: |
+          ${{ github.event.inputs.changelog }}
+          
+          ## 🔧 使用说明
+          运行应用:
+          ```bash
+          java -jar app-${{ github.event.inputs.version }}.jar
+          ```
+          
+          ## 📊 构建信息
+          - 构建时间: ${{ github.event.head_commit.timestamp }}
+          - 提交: ${{ github.sha }}
+          - 构建号: ${{ github.run_number }}
+        draft: ${{ github.event.inputs.release_type == 'draft' }}
+        prerelease: ${{ github.event.inputs.release_type == 'prerelease' }}
+        files: |
+          app-${{ github.event.inputs.version }}.jar
+        token: ${{ secrets.GITHUB_TOKEN }}
