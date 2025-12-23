@@ -34,7 +34,8 @@ jobs:
       uses: actions/setup-java@v4
       with:
         java-version: '8'
-
+        distribution: 'temurin'  # 这是必需的参数
+        
     - name: 创建 Git 标签
       run: |
         git config user.name "github-actions"
