@@ -30,16 +30,12 @@ jobs:
     - name: Build with Maven
       run: |
         echo "开始编译 Spring Boot 项目..."
-        mvn clean compile
+        mvn spring-boot:run
         echo "编译完成！"
-        
-    - name: 运行测试
-      run: mvn test
-
     - name: 打包项目
       run: |
         echo "打包 Spring Boot 应用..."
-        mvn package -DskipTests
+        mvn clean install
         echo "打包完成！"
         ls -la target/*.jar
 
@@ -47,7 +43,7 @@ jobs:
       run: |
         echo "启动 Spring Boot 应用..."
         # 后台运行应用
-        nohup java -jar target/*.jar > app.log 2>&1 &
+        java -jar target/helloworld-0.0.1-SNAPSHOT.jar
         sleep 10
         
         echo "检查应用状态..."
